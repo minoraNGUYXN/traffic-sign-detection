@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Sign Detection System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1em;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: calc(100vh - 140px);
+        }
+
+        .stats-container, .controls-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+        }
+
+        .video-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .video-container-wrapper {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        #videoContainer {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #webcam, #overlay {
+            width: 640px;
+            height: 480px;
+            border-radius: 10px;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .stat-value {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 1.2em;
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-group h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .button.secondary {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .control-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 25px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 25px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 19px;
+            width: 19px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(25px);
+        }
+
+        .detections-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .detection-item {
+            background: #f8f9fa;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .status-connected {
+            background-color: #2ed573;
+        }
+
+        .status-disconnected {
+            background-color: #ff4757;
+        }
+
+        .error-message {
+            background: #ff4757;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto;
+            }
+
+            .stats-container, .controls-section {
+                order: 2;
+            }
+
+            .video-section {
+                order: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #webcam, #overlay {
+                width: 100%;
+                max-width: 480px;
+                height: auto;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .main-container {
+                padding: 10px;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚦 Hệ Thống Nhận Diện Biển Báo Giao Thông</h1>
+        <p class="subtitle">Sử dụng YOLO cho nhận diện và phân loại thời gian thực</p>
+    </div>
+
+    <div class="error-message" id="errorMessage"></div>
+
+    <div class="main-container">
+        <!-- Statistics -->
+        <div class="stats-container">
+            <h3>📊 Thống kê</h3>
+            <div class="stat-item">
+                <span class="stat-label">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    Trạng thái:
+                </span>
+                <span class="stat-value" id="connectionStatus">Disconnected</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Biển báo phát hiện:</span>
+                <span class="stat-value" id="signCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">FPS:</span>
+                <span class="stat-value" id="fpsCounter">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Tổng phát hiện:</span>
+                <span class="stat-value" id="totalCount">0</span>
+            </div>
+
+            <div class="detections-list" id="detectionsList">
+                <!-- Detection items will be added here -->
+            </div>
+        </div>
+
+        <!-- Video -->
+        <div class="video-section">
+            <div class="video-container-wrapper">
+                <div id="videoContainer">
+                    <video id="webcam" autoplay muted playsinline></video>
+                    <canvas id="overlay"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-section">
+            <div class="control-group">
+                <h3>📹 Điều khiển Camera</h3>
+                <button id="startButton" class="button">Bắt đầu Camera</button>
+                <button id="stopButton" class="button secondary">Dừng Camera</button>
+            </div>
+
+            <div class="control-group">
+                <h3>⚙️ Cài đặt hiển thị</h3>
+                <div class="control-row">
+                    <span class="control-label">Hiển thị khung:</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggleBoxes" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="control-row">
+                    <span class="control-label">Hiển thị độ tin cậy:</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggleConfidence" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>© 2025 Traffic Sign Detection System | Powered by FastAPI & YOLO</p>
+    </div>
+
+    <script>
+        class TrafficSignDetector {
+            constructor() {
+                this.webcam = document.getElementById('webcam');
+                this.overlay = document.getElementById('overlay');
+                this.ctx = this.overlay.getContext('2d');
+                this.isRunning = false;
+                this.processInterval = null;
+                this.apiBaseUrl = window.location.origin; // Automatically detect the base URL
+
+                this.stats = {
+                    signCount: 0,
+                    totalCount: 0,
+                    fps: 0
+                };
+
+                this.initializeControls();
+                this.checkApiConnection();
+            }
+
+            async checkApiConnection() {
+                try {
+                    const response = await fetch(`${this.apiBaseUrl}/health`);
+                    if (response.ok) {
+                        this.updateConnectionStatus(true);
+                    } else {
+                        this.updateConnectionStatus(false);
+                    }
+                } catch (error) {
+                    console.error('API connection check failed:', error);
+                    this.updateConnectionStatus(false);
+                    this.showError('Không thể kết nối đến API server. Vui lòng kiểm tra server đang chạy trên port 8000.');
+                }
+            }
+
+            updateConnectionStatus(connected) {
+                const statusIndicator = document.getElementById('statusIndicator');
+                const connectionStatus = document.getElementById('connectionStatus');
+
+                if (connected) {
+                    statusIndicator.className = 'status-indicator status-connected';
+                    connectionStatus.textContent = 'Connected';
+                } else {
+                    statusIndicator.className = 'status-indicator status-disconnected';
+                    connectionStatus.textContent = 'Disconnected';
+                }
+            }
+
+            showError(message) {
+                const errorElement = document.getElementById('errorMessage');
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+                setTimeout(() => {
+                    errorElement.style.display = 'none';
+                }, 5000);
+            }
+
+            initializeControls() {
+                document.getElementById('startButton').addEventListener('click', () => this.startCamera());
+                document.getElementById('stopButton').addEventListener('click', () => this.stopCamera());
+            }
+
+            async startCamera() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: 640, height: 480 }
+                    });
+
+                    this.webcam.srcObject = stream;
+                    this.isRunning = true;
+
+                    this.webcam.onloadedmetadata = () => {
+                        this.overlay.width = this.webcam.videoWidth;
+                        this.overlay.height = this.webcam.videoHeight;
+                        this.startProcessing();
+                    };
+
+                } catch (error) {
+                    console.error('Camera access error:', error);
+                    this.showError('Không thể truy cập camera! Vui lòng cho phép truy cập camera.');
+                }
+            }
+
+            stopCamera() {
+                this.isRunning = false;
+
+                if (this.processInterval) {
+                    clearInterval(this.processInterval);
+                }
+
+                if (this.webcam.srcObject) {
+                    this.webcam.srcObject.getTracks().forEach(track => track.stop());
+                    this.webcam.srcObject = null;
+                }
+
+                this.ctx.clearRect(0, 0, this.overlay.width, this.overlay.height);
+            }
+
+            startProcessing() {
+                this.processInterval = setInterval(() => {
+                    if (this.isRunning) {
+                        this.processFrame();
+                    }
+                }, 200); // Process every 200ms
+            }
+
+            async processFrame() {
+                try {
+                    // Capture frame from video
+                    const canvas = document.createElement('canvas');
+                    canvas.width = this.webcam.videoWidth;
+                    canvas.height = this.webcam.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(this.webcam, 0, 0);
+
+                    // Convert to blob
+                    canvas.toBlob(async (blob) => {
+                        if (!blob) return;
+
+                        const formData = new FormData();
+                        formData.append('file', blob, 'frame.jpg');
+
+                        try {
+                            const response = await fetch(`${this.apiBaseUrl}/process_frame`, {
+                                method: 'POST',
+                                body: formData
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+
+                            const result = await response.json();
+
+                            if (result.success) {
+                                this.drawDetections(result.detections);
+                                this.updateStats(result);
+                                this.updateConnectionStatus(true);
+                            } else {
+                                console.error('Processing failed:', result.error);
+                                this.showError(`Processing failed: ${result.error}`);
+                            }
+
+                        } catch (error) {
+                            console.error('Processing error:', error);
+                            this.updateConnectionStatus(false);
+                            this.showError(`Lỗi xử lý: ${error.message}`);
+                        }
+                    }, 'image/jpeg', 0.8);
+
+                } catch (error) {
+                    console.error('Frame capture error:', error);
+                    this.showError(`Lỗi capture frame: ${error.message}`);
+                }
+            }
+
+            drawDetections(detections) {
+                // Clear overlay
+                this.ctx.clearRect(0, 0, this.overlay.width, this.overlay.height);
+
+                if (!document.getElementById('toggleBoxes').checked) return;
+
+                detections.forEach(detection => {
+                    const [x1, y1, x2, y2] = detection.coords;
+                    const confidence = detection.confidence;
+
+                    // Choose color based on confidence
+                    let color = '#ff4757'; // Red for low confidence
+                    if (confidence > 80) color = '#2ed573'; // Green for high
+                    else if (confidence > 60) color = '#ffa502'; // Orange for medium
+
+                    // Draw bounding box
+                    this.ctx.strokeStyle = color;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+                    // Draw label
+                    if (document.getElementById('toggleConfidence').checked) {
+                        const label = `${detection.class_name}: ${confidence.toFixed(1)}%`;
+
+                        // Background for text
+                        this.ctx.fillStyle = color;
+                        this.ctx.fillRect(x1, y1 - 25, label.length * 8, 20);
+
+                        // Text
+                        this.ctx.fillStyle = 'white';
+                        this.ctx.font = '14px Arial';
+                        this.ctx.fillText(label, x1 + 2, y1 - 8);
+                    }
+                });
+            }
+
+            updateStats(result) {
+                this.stats.signCount = result.traffic_signs;
+                this.stats.totalCount += result.traffic_signs;
+
+                // Update UI
+                document.getElementById('signCount').textContent = this.stats.signCount;
+                document.getElementById('totalCount').textContent = this.stats.totalCount;
+
+                // Update detections list
+                const detectionsList = document.getElementById('detectionsList');
+                detectionsList.innerHTML = '';
+
+                result.detections.forEach(detection => {
+                    const item = document.createElement('div');
+                    item.className = 'detection-item';
+                    item.innerHTML = `
+                        <strong>${detection.class_name}</strong><br>
+                        Confidence: ${detection.confidence.toFixed(1)}%
+                    `;
+                    detectionsList.appendChild(item);
+                });
+
+                // Update FPS (simple calculation)
+                this.stats.fps = Math.round(1000 / 200); // Based on processing interval
+                document.getElementById('fpsCounter').textContent = this.stats.fps;
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new TrafficSignDetector();
+        });
+    </script>
+</body>
+</html>
