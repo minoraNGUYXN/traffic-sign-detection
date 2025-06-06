@@ -9,7 +9,7 @@ import os
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Đường dẫn mô hình / Model paths
-DETECTION_MODEL_PATH = os.path.join(PROJECT_ROOT, "models", "yolo11n.pt")
+DETECTION_MODEL_PATH = os.path.join(PROJECT_ROOT, "models", "yolo11s.pt")
 RECOGNITION_MODEL_PATH = os.path.join(PROJECT_ROOT, "models", "traffic_sign_vgg16.h5")
 
 # Danh sách nhãn biển báo

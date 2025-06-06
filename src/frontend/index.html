@@ -282,7 +282,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>🚦 Hệ Thống Nhận Diện Biển Báo Giao Thông</h1>
+        <h1>Hệ Thống Nhận Diện Biển Báo Giao Thông</h1>
         <p class="subtitle">Sử dụng YOLO cho nhận diện và phân loại thời gian thực</p>
     </div>
 
@@ -291,7 +291,7 @@
     <div class="main-container">
         <!-- Statistics -->
         <div class="stats-container">
-            <h3>📊 Thống kê</h3>
+            <h3>Thống kê</h3>
             <div class="stat-item">
                 <span class="stat-label">
                     <span class="status-indicator" id="statusIndicator"></span>
@@ -306,10 +306,6 @@
             <div class="stat-item">
                 <span class="stat-label">FPS:</span>
                 <span class="stat-value" id="fpsCounter">0</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Tổng phát hiện:</span>
-                <span class="stat-value" id="totalCount">0</span>
             </div>
 
             <div class="detections-list" id="detectionsList">
@@ -330,13 +326,13 @@
         <!-- Controls -->
         <div class="controls-section">
             <div class="control-group">
-                <h3>📹 Điều khiển Camera</h3>
+                <h3>Điều khiển Camera</h3>
                 <button id="startButton" class="button">Bắt đầu Camera</button>
                 <button id="stopButton" class="button secondary">Dừng Camera</button>
             </div>
 
             <div class="control-group">
-                <h3>⚙️ Cài đặt hiển thị</h3>
+                <h3>Cài đặt hiển thị</h3>
                 <div class="control-row">
                     <span class="control-label">Hiển thị khung:</span>
                     <label class="toggle-switch">
@@ -367,11 +363,11 @@
                 this.ctx = this.overlay.getContext('2d');
                 this.isRunning = false;
                 this.processInterval = null;
-                this.apiBaseUrl = window.location.origin; // Automatically detect the base URL
+                this.apiBaseUrl = window.location.origin;
+                this.confidenceThreshold = 70; // Minimum confidence threshold (70%)
 
                 this.stats = {
                     signCount: 0,
-                    totalCount: 0,
                     fps: 0
                 };
 
@@ -521,14 +517,22 @@
 
                 if (!document.getElementById('toggleBoxes').checked) return;
 
-                detections.forEach(detection => {
+                // Filter detections by confidence threshold
+                const filteredDetections = detections.filter(detection =>
+                    detection.confidence >= this.confidenceThreshold
+                );
+
+                filteredDetections.forEach(detection => {
                     const [x1, y1, x2, y2] = detection.coords;
                     const confidence = detection.confidence;
 
-                    // Choose color based on confidence
-                    let color = '#ff4757'; // Red for low confidence
-                    if (confidence > 80) color = '#2ed573'; // Green for high
-                    else if (confidence > 60) color = '#ffa502'; // Orange for medium
+                    // Color based on confidence level
+                    let color = '#2ed573'; // Green for high confidence (70%+)
+                    if (confidence >= 90) {
+                        color = '#00b894'; // Darker green for very high confidence (90%+)
+                    } else if (confidence >= 80) {
+                        color = '#00cec9'; // Teal for good confidence (80%+)
+                    }
 
                     // Draw bounding box
                     this.ctx.strokeStyle = color;
@@ -552,18 +556,21 @@
             }
 
             updateStats(result) {
-                this.stats.signCount = result.traffic_signs;
-                this.stats.totalCount += result.traffic_signs;
+                // Count only detections above confidence threshold
+                const filteredDetections = result.detections.filter(detection =>
+                    detection.confidence >= this.confidenceThreshold
+                );
+
+                this.stats.signCount = filteredDetections.length;
 
                 // Update UI
                 document.getElementById('signCount').textContent = this.stats.signCount;
-                document.getElementById('totalCount').textContent = this.stats.totalCount;
 
-                // Update detections list
+                // Update detections list - show only filtered detections
                 const detectionsList = document.getElementById('detectionsList');
                 detectionsList.innerHTML = '';
 
-                result.detections.forEach(detection => {
+                filteredDetections.forEach(detection => {
                     const item = document.createElement('div');
                     item.className = 'detection-item';
                     item.innerHTML = `
@@ -572,6 +579,16 @@
                     `;
                     detectionsList.appendChild(item);
                 });
+
+                // Show message if no high-confidence detections
+                if (filteredDetections.length === 0 && result.detections.length > 0) {
+                    const item = document.createElement('div');
+                    item.className = 'detection-item';
+                    item.style.fontStyle = 'italic';
+                    item.style.color = '#666';
+                    item.innerHTML = `Phát hiện ${result.detections.length} biển báo nhưng độ tin cậy < 70%`;
+                    detectionsList.appendChild(item);
+                }
 
                 // Update FPS (simple calculation)
                 this.stats.fps = Math.round(1000 / 200); // Based on processing interval

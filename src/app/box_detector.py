@@ -13,8 +13,8 @@ class Detector:
             raise Exception("Failed to load models")
 
         # Thresholds
-        self.detection_confidence = 0.7
-        self.classification_confidence = 0.8
+        self.detection_confidence = 0.6
+        self.classification_confidence = 0.7
 
         # Statistics
         self.total_detections = 0
