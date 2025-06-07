@@ -17,9 +17,11 @@ Dự án này triển khai một hệ thống nhận diện biển báo giao th�
 - PyTorch
 
 ## Dataset
--Mapillary Traffic Sign Dataset
--German Traffic Sign Recognition Benchmark (GTSRB)
+
+- Mapillary Traffic Sign Dataset
+- German Traffic Sign Recognition Benchmark (GTSRB)
 
 ## Mô hình
--YOLOv8, YOLOv11 cho phát hiện biển báo giao thông
--VGG16 cho phân loại biển báo giao thông
+
+- YOLOv8, YOLOv11 cho phát hiện biển báo giao thông
+- VGG16 cho phân loại biển báo giao thông
